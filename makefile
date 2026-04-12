@@ -4,8 +4,8 @@ CC=gcc
 LD=ld
 
 ASMFLAGS=-f elf32
-CFLAGS=-m32 -c
-LDFLAGS=-m elf_i386 -T src/link.ld
+CFLAGS=-m32 -c -ffreestanding -fno-stack-protector -fno-builtin -nostdlib -O0
+LDFLAGS=-m elf_i386 -T src/link.ld -nostdlib
 
 KERNEL=build/kernel
 ISO=build/jos.iso
@@ -22,12 +22,16 @@ ISO_DIR=iso
 # ====== DEFAULT ======
 all: iso
 
+# ====== BUILD DIR ======
+build:
+	mkdir -p build
+
 # ====== ASM ======
-$(ASM_OBJ): $(ASM_SRC)
+$(ASM_OBJ): $(ASM_SRC) | build
 	$(ASM) $(ASMFLAGS) $(ASM_SRC) -o $(ASM_OBJ)
 
 # ====== C ======
-$(C_OBJ): $(C_SRC)
+$(C_OBJ): $(C_SRC) | build
 	$(CC) $(CFLAGS) $(C_SRC) -o $(C_OBJ)
 
 # ====== LINK ======
@@ -41,13 +45,13 @@ iso: $(KERNEL)
 
 	cp $(KERNEL) $(ISO_DIR)/boot/kernel
 
-	@echo "set timeout=0" > $(ISO_DIR)/boot/grub/grub.cfg
-	@echo "set default=0" >> $(ISO_DIR)/boot/grub/grub.cfg
-	@echo "" >> $(ISO_DIR)/boot/grub/grub.cfg
-	@echo "menuentry \"My Kernel\" {" >> $(ISO_DIR)/boot/grub/grub.cfg
-	@echo "    multiboot /boot/kernel" >> $(ISO_DIR)/boot/grub/grub.cfg
-	@echo "    boot" >> $(ISO_DIR)/boot/grub/grub.cfg
-	@echo "}" >> $(ISO_DIR)/boot/grub/grub.cfg
+	@echo "set timeout=0"                    > $(ISO_DIR)/boot/grub/grub.cfg
+	@echo "set default=0"                   >> $(ISO_DIR)/boot/grub/grub.cfg
+	@echo ""                                >> $(ISO_DIR)/boot/grub/grub.cfg
+	@echo "menuentry \"jOS\" {"             >> $(ISO_DIR)/boot/grub/grub.cfg
+	@echo "    multiboot /boot/kernel"      >> $(ISO_DIR)/boot/grub/grub.cfg
+	@echo "    boot"                        >> $(ISO_DIR)/boot/grub/grub.cfg
+	@echo "}"                               >> $(ISO_DIR)/boot/grub/grub.cfg
 
 	grub-mkrescue -o $(ISO) $(ISO_DIR)
 
