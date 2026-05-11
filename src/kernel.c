@@ -19,8 +19,8 @@ struct IDT_entry {
 
 struct IDT_entry IDT[IDT_SIZE];
 
-char *vidptr = (char*)0xb8000;
-unsigned int current_loc = 0;
+volatile char *vidptr = (char*)0xb8000;
+volatile unsigned int current_loc = 0;
 
 unsigned char idt_ptr[6];
 
@@ -75,19 +75,37 @@ void keyboard_handler_main(void)
 
         write_port(0x20, 0x20); // EOI après lecture
 
-        if (keycode & 0x80) // key release, on ignore
-            return;
+        if (!(keycode & 0x80)){
+        	vidptr[current_loc++] = keyboard_map[keycode];
+        	vidptr[current_loc++] = 0x07;
+        }
+    }
+    write_port(0x20, 0x20); // EOI
+}
 
-        vidptr[current_loc++] = keyboard_map[keycode];
-        vidptr[current_loc++] = 0x07;
+void print_char(char c) {
+    if (c == '\n') {
+        unsigned int line_width = 80 * 2;
+        current_loc = (current_loc / line_width + 1) * line_width;
     } else {
-        write_port(0x20, 0x20); // EOI même si pas de data
+        vidptr[current_loc++] = c;
+        vidptr[current_loc++] = 0x07;
     }
 }
 
+void print_string(const char *s) {
+    while (*s) {
+        print_char(*s++);
+    }
+}
+
+const char *str = "jOS booting...\n";
+
 void kmain(void)
 {
-    const char *str = "jOS v.1.0.2";
+
+	print_string("jOS booting...\n");
+
     unsigned int i = 0;
     unsigned int j = 0;
 
