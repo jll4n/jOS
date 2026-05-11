@@ -19,7 +19,9 @@ start:
     cli
     mov esp, stack_top
     call kmain
-    hlt
+.hang:
+	hlt
+	jmp .hang
 
 read_port:
     mov edx, [esp + 4]
@@ -33,10 +35,13 @@ write_port:
     ret
 
 keyboard_handler:
+	pusha
     call keyboard_handler_main
+    popa
     iretd
 
 load_idt:
+	cli
     mov edx, [esp + 4]
     lidt [edx]
     sti
@@ -46,4 +51,5 @@ section .bss
 alignb 16
 stack_bottom:
     resb 65536
+    align 16
 stack_top:
