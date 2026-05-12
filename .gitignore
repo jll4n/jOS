@@ -1,3 +1,4 @@
 .history
 build
 iso
+src/.kernel.asm.swo
