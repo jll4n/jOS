@@ -1,11 +1,14 @@
 #![no_std]
 #![no_main]
 
+mod vga_buffer;
+pub mod arch;
+
 use core::panic::PanicInfo;
 use core::arch::asm;
 use core::arch::naked_asm;
 
-mod vga_buffer;
+use crate::arch::x86::keyboard_map::KEYBOARD_MAP;
 
 pub const IDT_SIZE: usize = 256;
 pub const KEYBOARD_DATA_PORT: u16 = 0x60;
@@ -17,6 +20,7 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 
 #[repr(C, packed)]
+#[derive(Copy,Clone)]
 pub struct IDTEntry{
 	pub offset_low: u16,
 	pub selector: u16,
@@ -33,7 +37,7 @@ pub static mut IDT: [IDTEntry; IDT_SIZE] = [IDTEntry {
 	offset_high: 0,
 }; IDT_SIZE];
 
-pub const vidptr: *mut u8 = 0xb8000 as *mut u8;
+pub const VIDPTR: *mut u8 = 0xb8000 as *mut u8;
 pub static mut current_loc: usize = 0;
 
 pub unsafe extern "C" fn read_port(_port: u16) -> u8{
@@ -96,25 +100,17 @@ pub fn kb_init(){
 
 #[no_mangle]
 pub extern "C" fn kmain() {
-    print_string("jOS booting...\n");
-
     unsafe {
         idt_init();
         kb_init();
-    }
 
-    // Clear écran comme dans ton C
-    unsafe {
-        let vidptr = 0xb8000 as *mut u8;
         let mut j = 0;
         while j < 80 * 25 * 2 {
-            core::ptr::write_volatile(vidptr.add(j), b' ');
-            core::ptr::write_volatile(vidptr.add(j + 1), 0x07);
+            core::ptr::write_volatile(VIDPTR.add(j), b' ');
+            core::ptr::write_volatile(VIDPTR.add(j + 1), 0x07);
             j += 2;
         }
     }
-
-    print_string("jOS booting...\n");
 }
 
 #[no_mangle]
@@ -127,9 +123,9 @@ pub extern "C" fn keyboard_handler_main() {
             write_port(0x20, 0x20); // EOI
 
             if keycode & 0x80 == 0 {
-                let c = keyboard_map(keycode);
+                let c = KEYBOARD_MAP[keycode as usize];
                 if c != 0 {
-                    print_char(c as char);
+                    //print_char(c as char);
                 }
             }
         }
